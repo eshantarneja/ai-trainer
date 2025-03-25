@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -13,6 +13,11 @@ CORS(app)  # Enable CORS for all routes
 
 # Initialize Firebase
 firebase = FirebaseHandler()
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint that redirects to the health check endpoint."""
+    return redirect('/api/health')
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -75,7 +80,7 @@ def delete_workout(workout_id):
     return jsonify({"message": "Workout deleted successfully"})
 
 if __name__ == '__main__':
-    # Get port from environment variable or use 5000 as default
-    port = int(os.environ.get('PORT', 5000))
+    # Get port from environment variable or use 5002 as default
+    port = int(os.environ.get('PORT', 5002))
     # Run the app with host set to 0.0.0.0 to make it externally visible
     app.run(host='0.0.0.0', port=port, debug=True)
