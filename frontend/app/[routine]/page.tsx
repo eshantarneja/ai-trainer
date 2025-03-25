@@ -1,51 +1,108 @@
+'use client'
+
 import Link from "next/link"
 import Image from "next/image"
-import { workoutRoutines } from "@/lib/workout-data"
-import { notFound } from "next/navigation"
+import { notFound, useParams } from "next/navigation"
+import { getRoutine, getExercisesByRoutine, formatRestTime } from "@/lib/api"
+import { useEffect, useState } from "react"
+import type { Exercise, Routine } from "@/lib/api"
 
-export default function RoutinePage({ params }: { params: { routine: string } }) {
-  const routine = workoutRoutines.find((r) => r.id === params.routine)
+export default function RoutinePage() {
+  // Use the useParams hook instead of accessing params directly
+  const params = useParams()
+  const routineId = Array.isArray(params.routine) ? params.routine[0] : params.routine as string
+  
+  const [routineData, setRoutineData] = useState<Routine | null>(null);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!routine) {
-    notFound()
+  useEffect(() => {
+    async function fetchRoutineData() {
+      try {
+        setLoading(true);
+        const routineResponse = await getRoutine(routineId);
+        
+        if (!routineResponse) {
+          notFound();
+          return;
+        }
+        
+        setRoutineData(routineResponse);
+        
+        const exercisesData = await getExercisesByRoutine(routineId);
+        setExercises(exercisesData);
+      } catch (error) {
+        console.error("Error fetching routine data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchRoutineData();
+  }, [routineId]);
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <header className="bg-white py-4 px-4 border-b">
+          <div className="max-w-md mx-auto flex items-center justify-between">
+            <Link href="/" className="text-black">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-chevron-left"
+              >
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+            </Link>
+            <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+            <div className="w-12"></div>
+          </div>
+        </header>
+        <main className="max-w-md mx-auto px-4 py-4">
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                <div className="bg-white rounded-xl overflow-hidden shadow-sm p-4">
+                  <div className="flex">
+                    <div className="mr-4 w-20 h-20 bg-gray-200 rounded-lg animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-5 bg-gray-200 rounded w-1/2 mb-2 animate-pulse"></div>
+                      <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
+  
+  if (!routineData) {
+    notFound();
   }
 
-  // Group exercises by superset
-  const groupedExercises = routine.exercises.reduce((acc, exercise, index) => {
-    if (exercise.setType === "superset" && !exercise.supersetOrder) {
-      // This is a superset header
-      acc.push({
-        type: "supersetHeader",
-        name: exercise.name,
-        rounds: exercise.supersetRounds,
-        supersetId: exercise.supersetId,
-        exercises: [],
-      })
-    } else if (exercise.setType === "superset" && exercise.supersetOrder) {
-      // Find the superset this belongs to
-      const supersetIndex = acc.findIndex(
-        (group) => group.type === "supersetHeader" && group.supersetId === exercise.supersetId,
-      )
-
-      if (supersetIndex !== -1) {
-        acc[supersetIndex].exercises.push(exercise)
-      } else {
-        // If no header found, just add as a regular exercise
-        acc.push({
-          type: "exercise",
-          exercise,
-        })
-      }
-    } else {
-      // Regular straight set exercise
-      acc.push({
-        type: "exercise",
-        exercise,
-      })
-    }
-
-    return acc
-  }, [] as any[])
+  // For now, we'll treat all exercises as straight sets since our API doesn't support supersets yet
+  // We're simplifying the UI to just display exercises without superset grouping
+  const formattedExercises = exercises.map(exercise => ({
+    id: exercise.id,
+    name: exercise.name,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    rest: formatRestTime(exercise.rest_time),
+    image: "/placeholder.svg?height=80&width=80",
+    setType: "straight" as const
+  }))
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -67,7 +124,7 @@ export default function RoutinePage({ params }: { params: { routine: string } })
               <path d="m15 18-6-6 6-6" />
             </svg>
           </Link>
-          <h1 className="text-xl font-semibold">{routine.name}</h1>
+          <h1 className="text-xl font-semibold">{routineData.name}</h1>
           <div className="flex items-center space-x-4">
             <button className="text-black">
               <svg
@@ -111,78 +168,30 @@ export default function RoutinePage({ params }: { params: { routine: string } })
 
       <main className="max-w-md mx-auto px-4 py-4">
         <div className="space-y-4">
-          {groupedExercises.map((group, groupIndex) => {
-            if (group.type === "supersetHeader") {
-              return (
-                <div key={groupIndex} className="space-y-2">
-                  <div className="flex items-center">
-                    <h3 className="text-lg font-semibold">{group.name}</h3>
-                    <span className="ml-2 text-gray-500">{group.rounds} rounds</span>
+          {formattedExercises.map((exercise, index) => (
+            <div key={index} className="space-y-2">
+              <h3 className="text-lg font-semibold">Exercise {index + 1}</h3>
+              <div className="bg-white rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 flex">
+                  <div className="mr-4">
+                    <Image
+                      src={exercise.image}
+                      alt={exercise.name}
+                      width={80}
+                      height={80}
+                      className="rounded-lg"
+                    />
                   </div>
-
-                  <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-                    {group.exercises.map((exercise, exIndex) => (
-                      <div key={exIndex} className={exIndex !== 0 ? "border-t" : ""}>
-                        <div className="p-4 flex">
-                          <div className="mr-4">
-                            <Image
-                              src={exercise.image || "/placeholder.svg"}
-                              alt={exercise.name}
-                              width={80}
-                              height={80}
-                              className="rounded-lg"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between">
-                              <h4 className="text-lg font-medium">{exercise.name}</h4>
-                              <span className="bg-gray-100 h-8 w-8 flex items-center justify-center rounded-full font-medium">
-                                {exercise.supersetOrder}
-                              </span>
-                            </div>
-                            <p className="text-gray-500">
-                              {exercise.reps} reps
-                              {exercise.rest && ` • ${exercise.rest} rest`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex-1">
+                    <h4 className="text-lg font-medium">{exercise.name}</h4>
+                    <p className="text-gray-500">
+                      {exercise.sets} sets • {exercise.reps} reps • {exercise.rest} rest
+                    </p>
                   </div>
                 </div>
-              )
-            } else {
-              // Regular exercise
-              const { exercise } = group
-              return (
-                <div key={groupIndex} className="space-y-2">
-                  {exercise.setType === "straight" && <h3 className="text-lg font-semibold">Straight set</h3>}
-
-                  <div className="bg-white rounded-xl overflow-hidden shadow-sm">
-                    <div className="p-4 flex">
-                      <div className="mr-4">
-                        <Image
-                          src={exercise.image || "/placeholder.svg"}
-                          alt={exercise.name}
-                          width={80}
-                          height={80}
-                          className="rounded-lg"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-medium">{exercise.name}</h4>
-                        <p className="text-gray-500">
-                          {exercise.duration
-                            ? `${exercise.sets} set • ${exercise.duration}`
-                            : `${exercise.sets} sets • ${exercise.reps} reps • ${exercise.rest} rest`}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-          })}
+              </div>
+            </div>
+          ))}
         </div>
       </main>
     </div>
