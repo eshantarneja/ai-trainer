@@ -38,7 +38,7 @@ function RestTimer({
     return () => clearInterval(timer)
   }, [timeLeft, onSkipRest])
 
-  // Format as mm:ss
+  // Format time display
   const minutes = Math.floor(timeLeft / 60)
   const remainingSeconds = timeLeft % 60
   const formattedTime = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
@@ -68,16 +68,16 @@ function RestTimer({
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-12">
-        <div className="bg-white p-8 rounded-lg shadow-sm mb-6">
-          <h2 className="text-2xl font-bold text-center mb-6">Rest</h2>
-          <div className="text-6xl font-bold text-center mb-4">{formattedTime}</div>
+      <main className="max-w-md mx-auto px-4 flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 130px)' }}>
+        <div className="bg-white p-8 rounded-lg shadow-sm w-full mb-6">
+          <h2 className="text-2xl font-bold text-center mb-5">Rest</h2>
+          <div className="text-6xl font-bold text-center mb-5">{formattedTime}</div>
           <p className="text-center text-gray-600">
             Next: {nextExercise} - Set {nextSet}
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="w-full space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={onBack}
@@ -145,11 +145,11 @@ function ExerciseView({
         </div>
       </header>
 
-      <main className="max-w-md mx-auto px-4 py-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h2 className="text-xl font-bold text-center mb-4">{exercise.name}</h2>
+      <main className="max-w-md mx-auto px-4 py-4">
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-5">
+          <h2 className="text-xl font-bold mb-5 text-center">{exercise.name}</h2>
           
-          <div className="mb-6">
+          <div className="mb-5">
             <Image
               src={exercise.image}
               alt={exercise.name}
@@ -159,24 +159,26 @@ function ExerciseView({
             />
           </div>
 
-          <div className="bg-gray-100 p-4 rounded-lg mb-4">
-            <h3 className="text-gray-600 text-center mb-1">CURRENT SET</h3>
+          <div className="bg-gray-100 py-4 px-4 rounded-lg mb-4">
+            <h3 className="text-sm font-medium text-gray-500 text-center mb-1">CURRENT SET</h3>
             <p className="text-4xl font-bold text-center">{currentSet} of {totalSets}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <h3 className="text-gray-600 text-center mb-1">REPS</h3>
-              <p className="text-3xl font-bold text-center">{exercise.reps}</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-100 py-4 px-4 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-500 text-center mb-1">REPS</h3>
+              <p className="text-4xl font-bold text-center">{exercise.reps}</p>
             </div>
-            <div className="bg-gray-100 p-4 rounded-lg">
-              <h3 className="text-gray-600 text-center mb-1">REST</h3>
-              <p className="text-3xl font-bold text-center">{formatRestTime(exercise.rest_time)}</p>
+            <div className="bg-gray-100 py-4 px-4 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-500 text-center mb-1">REST</h3>
+              <p className="text-4xl font-bold text-center">
+                {exercise.rest_time >= 60 ? `${Math.floor(exercise.rest_time / 60)} min` : `${exercise.rest_time} sec`}
+              </p>
             </div>
           </div>
 
           {exercise.name === 'Flat Bench Press' && (
-            <div className="bg-blue-50 p-4 border border-blue-100 rounded-lg mb-4">
+            <div className="bg-blue-50 p-4 border border-blue-100 rounded-lg mt-4">
               <p className="text-blue-800">
                 Keep your feet flat on the floor and maintain a slight
                 arch in your lower back
@@ -185,7 +187,7 @@ function ExerciseView({
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={onBack}
