@@ -170,7 +170,7 @@ export default function RoutinePage() {
         <div className="space-y-4">
           {formattedExercises.map((exercise, index) => (
             <div key={index} className="space-y-2">
-              <h3 className="text-lg font-semibold">Exercise {index + 1}</h3>
+              <h3 className="text-lg font-semibold">Straight set</h3>
               <div className="bg-white rounded-xl overflow-hidden shadow-sm">
                 <div className="p-4 flex">
                   <div className="mr-4">
@@ -192,6 +192,14 @@ export default function RoutinePage() {
               </div>
             </div>
           ))}
+          
+          <div className="pt-4">
+            <Link 
+              href={`/${routineId}/workout`}
+              className="w-full block py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg text-center">
+              Start Routine
+            </Link>
+          </div>
         </div>
       </main>
     </div>
