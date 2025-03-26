@@ -25,8 +25,14 @@ function RestTimer({
 }) {
   const [timeLeft, setTimeLeft] = useState(seconds)
 
+  // Reset timer when seconds change (new exercise or set)
+  useEffect(() => {
+    setTimeLeft(seconds);
+  }, [seconds]);
+
   useEffect(() => {
     if (timeLeft <= 0) {
+      // Automatically proceed to next exercise/set when rest time is up
       onSkipRest()
       return
     }
@@ -120,6 +126,30 @@ function ExerciseView({
   onBack: () => void,
   onExitWorkout: () => void
 }) {
+  // Default rep time to 3 seconds if not specified in the exercise data
+  const defaultRepTime = 3;
+  const [repTimeLeft, setRepTimeLeft] = useState(exercise.rep_time || defaultRepTime);
+
+  // Reset rep time when exercise changes
+  useEffect(() => {
+    setRepTimeLeft(exercise.rep_time || defaultRepTime);
+  }, [exercise, defaultRepTime]);
+
+  // Countdown effect for rep time
+  useEffect(() => {
+    if (repTimeLeft <= 0) {
+      // Automatically proceed to rest when rep time is up
+      onNextSet();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setRepTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [repTimeLeft, onNextSet]);
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white py-4 px-4 border-b">
@@ -170,9 +200,9 @@ function ExerciseView({
               <p className="text-4xl font-bold text-center">{exercise.reps}</p>
             </div>
             <div className="bg-gray-100 py-4 px-4 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-500 text-center mb-1">REST</h3>
+              <h3 className="text-sm font-medium text-gray-500 text-center mb-1">REP TIME</h3>
               <p className="text-4xl font-bold text-center">
-                {exercise.rest_time >= 60 ? `${Math.floor(exercise.rest_time / 60)} min` : `${exercise.rest_time} sec`}
+                {repTimeLeft} sec
               </p>
             </div>
           </div>
@@ -245,6 +275,8 @@ export default function WorkoutPage() {
         const exercisesData = await getExercisesByRoutine(routineId)
         const formattedExercises = exercisesData.map(exercise => ({
           ...exercise,
+          // Default rep_time to 3 seconds if not provided in database
+          rep_time: exercise.rep_time || 3,
           image: "/placeholder.svg?height=300&width=500",
         }))
         
