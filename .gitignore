@@ -51,3 +51,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Test scripts
+test_firebase.py
+test_routines.py

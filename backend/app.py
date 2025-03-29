@@ -132,37 +132,83 @@ def delete_routine(routine_id):
 
 @app.route('/api/exercises', methods=['GET'])
 def get_exercises():
-    """Get all exercises, optionally filtered by routine_id."""
+    """Get exercises for a specific routine with merged data.
+    If routine_id is provided, returns exercises for that routine with their specific settings.
+    """
     routine_id = request.args.get('routine_id')
     exercises = firebase.get_exercises(routine_id)
     return jsonify({"exercises": exercises})
+    
+@app.route('/api/exercises/catalog', methods=['GET'])
+def get_exercise_catalog():
+    """Get all exercises from the catalog."""
+    exercises = firebase.get_exercises()
+    return jsonify({"exercises": exercises})
+    
+@app.route('/api/routine-exercises', methods=['GET'])
+def get_routine_exercises():
+    """Get all routine-exercise links, optionally filtered by routine_id."""
+    routine_id = request.args.get('routine_id')
+    routine_exercises_ref = firebase.db.collection('routine_exercises')
+    
+    if routine_id:
+        routine_exercises_ref = routine_exercises_ref.where('routine_id', '==', routine_id).order_by('order')
+    
+    routine_exercises = []
+    for doc in routine_exercises_ref.stream():
+        routine_exercise = doc.to_dict()
+        routine_exercise['id'] = doc.id
+        routine_exercises.append(routine_exercise)
+        
+    return jsonify({"routineExercises": routine_exercises})
 
-@app.route('/api/exercises/<exercise_id>', methods=['GET'])
-def get_exercise(exercise_id):
-    """Get a specific exercise by ID."""
+@app.route('/api/exercises/catalog/<exercise_id>', methods=['GET'])
+def get_exercise_catalog_item(exercise_id):
+    """Get a specific exercise from the catalog by ID."""
     exercise = firebase.get_exercise(exercise_id)
     if not exercise:
         return jsonify({"error": "Exercise not found"}), 404
     
     return jsonify({"exercise": exercise})
+    
+@app.route('/api/routine-exercises/<routine_exercise_id>', methods=['GET'])
+def get_routine_exercise(routine_exercise_id):
+    """Get a specific routine-exercise link by ID with complete data."""
+    exercise = firebase.get_routine_exercise(routine_exercise_id)
+    if not exercise:
+        return jsonify({"error": "Routine exercise not found"}), 404
+    
+    return jsonify({"exercise": exercise})
 
-@app.route('/api/exercises', methods=['POST'])
-def create_exercise():
-    """Create a new exercise."""
+@app.route('/api/exercises/catalog', methods=['POST'])
+def create_exercise_catalog_item():
+    """Create a new exercise in the catalog."""
     data = request.json
     
     # Validate required fields
-    required_fields = ['routine_id', 'name', 'sets', 'reps', 'rest_time']
+    if 'name' not in data:
+        return jsonify({"error": "name is required"}), 400
+    
+    exercise_id = firebase.create_exercise(data)
+    return jsonify({"message": "Exercise created successfully", "exercise_id": exercise_id}), 201
+    
+@app.route('/api/routine-exercises', methods=['POST'])
+def create_routine_exercise():
+    """Create a new link between routine and exercise."""
+    data = request.json
+    
+    # Validate required fields
+    required_fields = ['routine_id', 'exercise_id', 'order', 'sets', 'reps', 'rest_time']
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"{field} is required"}), 400
     
-    exercise_id = firebase.create_exercise(data)
-    return jsonify({"message": "Exercise created successfully", "exercise_id": exercise_id}), 201
+    routine_exercise_id = firebase.create_routine_exercise(data)
+    return jsonify({"message": "Routine exercise created successfully", "routine_exercise_id": routine_exercise_id}), 201
 
-@app.route('/api/exercises/<exercise_id>', methods=['PUT'])
-def update_exercise(exercise_id):
-    """Update a specific exercise."""
+@app.route('/api/exercises/catalog/<exercise_id>', methods=['PUT'])
+def update_exercise_catalog_item(exercise_id):
+    """Update a specific exercise in the catalog."""
     data = request.json
     
     success = firebase.update_exercise(exercise_id, data)
@@ -170,15 +216,38 @@ def update_exercise(exercise_id):
         return jsonify({"error": "Failed to update exercise"}), 500
     
     return jsonify({"message": "Exercise updated successfully"})
+    
+@app.route('/api/routine-exercises/<routine_exercise_id>', methods=['PUT'])
+def update_routine_exercise(routine_exercise_id):
+    """Update a specific routine-exercise link."""
+    data = request.json
+    success = firebase.update_routine_exercise(routine_exercise_id, data)
+    
+    if not success:
+        return jsonify({"error": "Failed to update routine exercise"}), 500
+        
+    return jsonify({"message": "Routine exercise updated successfully"})
 
-@app.route('/api/exercises/<exercise_id>', methods=['DELETE'])
-def delete_exercise(exercise_id):
-    """Delete a specific exercise."""
+@app.route('/api/exercises/catalog/<exercise_id>', methods=['DELETE'])
+def delete_exercise_catalog_item(exercise_id):
+    """Delete a specific exercise from the catalog.
+    Note: This won't delete routine_exercise links automatically.
+    """
     success = firebase.delete_exercise(exercise_id)
     if not success:
         return jsonify({"error": "Failed to delete exercise"}), 500
     
     return jsonify({"message": "Exercise deleted successfully"})
+    
+@app.route('/api/routine-exercises/<routine_exercise_id>', methods=['DELETE'])
+def delete_routine_exercise(routine_exercise_id):
+    """Delete a specific routine-exercise link."""
+    success = firebase.delete_routine_exercise(routine_exercise_id)
+    
+    if not success:
+        return jsonify({"error": "Failed to delete routine exercise"}), 500
+        
+    return jsonify({"message": "Routine exercise deleted successfully"})
 
 if __name__ == '__main__':
     # Get port from environment variable or use 5002 as default

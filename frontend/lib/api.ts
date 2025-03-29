@@ -21,14 +21,44 @@ async function fetchWithErrorHandling(url: string, options?: RequestInit) {
   }
 }
 
-export interface Exercise {
+// Base exercise from the catalog
+export interface ExerciseCatalogItem {
+  id: string;
+  name: string;
+  default_sets?: number;
+  default_reps?: number;
+  default_rep_time?: number;
+  default_rest_time?: number;
+  audio_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Link between routine and exercise with specific settings
+export interface RoutineExercise {
   id: string;
   routine_id: string;
+  exercise_id: string;
+  order: number;
+  sets: number;
+  reps: number;
+  rep_time?: number;
+  rest_time: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Combined exercise data for display in a routine
+export interface Exercise {
+  id: string; // This is the exercise catalog id
+  routine_exercise_id: string; // ID of the link record
   name: string;
   sets: number;
   reps: number;
   rest_time: number;
   rep_time?: number;
+  order: number;
+  audio_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -75,9 +105,47 @@ export async function getExercisesByRoutine(routineId: string): Promise<Exercise
   try {
     const response = await fetchWithErrorHandling(`${API_BASE_URL}/exercises?routine_id=${routineId}`);
     const data = await response.json();
+    
+    // The backend already returns exercises in the correct order
     return data.exercises;
   } catch (error) {
     console.error(`Error fetching exercises for routine ${routineId}:`, error);
+    return [];
+  }
+}
+
+// Fetch all exercises from the catalog
+export async function getExerciseCatalog(): Promise<ExerciseCatalogItem[]> {
+  try {
+    const response = await fetchWithErrorHandling(`${API_BASE_URL}/exercises/catalog`);
+    const data = await response.json();
+    return data.exercises;
+  } catch (error) {
+    console.error('Error fetching exercise catalog:', error);
+    return [];
+  }
+}
+
+// Get a specific exercise from the catalog
+export async function getExerciseCatalogItem(exerciseId: string): Promise<ExerciseCatalogItem | null> {
+  try {
+    const response = await fetchWithErrorHandling(`${API_BASE_URL}/exercises/catalog/${exerciseId}`);
+    const data = await response.json();
+    return data.exercise;
+  } catch (error) {
+    console.error(`Error fetching exercise catalog item ${exerciseId}:`, error);
+    return null;
+  }
+}
+
+// Get all routine exercises (links) for a routine
+export async function getRoutineExercises(routineId: string): Promise<RoutineExercise[]> {
+  try {
+    const response = await fetchWithErrorHandling(`${API_BASE_URL}/routine-exercises?routine_id=${routineId}`);
+    const data = await response.json();
+    return data.routineExercises;
+  } catch (error) {
+    console.error(`Error fetching routine exercises for routine ${routineId}:`, error);
     return [];
   }
 }

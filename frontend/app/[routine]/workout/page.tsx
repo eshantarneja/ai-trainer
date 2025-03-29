@@ -273,7 +273,24 @@ export default function WorkoutPage() {
         setRoutine(routineData)
         
         const exercisesData = await getExercisesByRoutine(routineId)
-        const formattedExercises = exercisesData.map(exercise => ({
+        
+        // With the new normalized schema, exercises have an 'order' field that's used to sort them
+        // The backend API already returns them sorted, but we'll sort here as well for safety
+        const sortedExercises = [...exercisesData].sort((a, b) => {
+          // Sort primarily by order field
+          if (a.order !== undefined && b.order !== undefined) {
+            return a.order - b.order
+          } else if (a.order !== undefined) {
+            return -1
+          } else if (b.order !== undefined) {
+            return 1
+          }
+          
+          // Fall back to sorting by name if order is not available
+          return a.name.localeCompare(b.name)
+        })
+        
+        const formattedExercises = sortedExercises.map(exercise => ({
           ...exercise,
           // Default rep_time to 3 seconds if not provided in database
           rep_time: exercise.rep_time || 3,
