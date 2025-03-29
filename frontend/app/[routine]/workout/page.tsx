@@ -258,6 +258,8 @@ export default function WorkoutPage() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [currentSet, setCurrentSet] = useState(1)
   const [isResting, setIsResting] = useState(false)
+  // Track the next exercise/set to show during rest
+  const [nextExerciseInfo, setNextExerciseInfo] = useState<{ name: string, set: number }>({ name: '', set: 0 })
   
   useEffect(() => {
     async function fetchWorkoutData() {
@@ -322,10 +324,21 @@ export default function WorkoutPage() {
   const currentExercise = exercises[currentExerciseIndex]
   
   const handleNext = () => {
+    // First, determine what's coming next (before updating state)
+    let nextExInfo;
+    
     // If this was the last set of the current exercise
     if (currentSet >= currentExercise.sets) {
       // If there are more exercises
       if (currentExerciseIndex < exercises.length - 1) {
+        // Next will be the first set of the next exercise
+        nextExInfo = {
+          name: exercises[currentExerciseIndex + 1].name,
+          set: 1
+        }
+        
+        // Update the state for next exercise
+        setNextExerciseInfo(nextExInfo)
         setCurrentExerciseIndex(prev => prev + 1)
         setCurrentSet(1)
       } else {
@@ -334,6 +347,15 @@ export default function WorkoutPage() {
         return
       }
     } else {
+      // Next will be the next set of the current exercise
+      nextExInfo = {
+        name: currentExercise.name,
+        set: currentSet + 1
+      }
+      
+      // Save the next info for the rest screen
+      setNextExerciseInfo(nextExInfo)
+      
       // Move to next set of current exercise
       setCurrentSet(prev => prev + 1)
     }
@@ -372,30 +394,7 @@ export default function WorkoutPage() {
     router.push(`/${routineId}`)
   }
   
-  // Determine the next exercise and set for the rest timer
-  const getNextExerciseInfo = () => {
-    if (currentSet < currentExercise.sets) {
-      // Next set of same exercise
-      return {
-        name: currentExercise.name,
-        set: currentSet + 1
-      }
-    } else if (currentExerciseIndex < exercises.length - 1) {
-      // First set of next exercise
-      return {
-        name: exercises[currentExerciseIndex + 1].name,
-        set: 1
-      }
-    } else {
-      // End of workout
-      return {
-        name: currentExercise.name,
-        set: currentSet
-      }
-    }
-  }
-  
-  const nextExerciseInfo = getNextExerciseInfo()
+  // The next exercise info is now stored in state when the user clicks next
   
   if (isResting) {
     return (
