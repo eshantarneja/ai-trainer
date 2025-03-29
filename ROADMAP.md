@@ -1,8 +1,8 @@
-# AI Trainer Application Roadmap
+# AI Personal Trainer Roadmap
 
-This document tracks the development progress and future plans for the AI Trainer application.
+This document tracks the development progress and future plans for the AI Personal Trainer application, focusing on voice-guided workouts and AI-generated workout plans.
 
-## ✅ Completed Tasks
+## ✅ Completed Tasks (Foundation)
 
 ### Database & Backend
 - ✅ Implemented normalized database schema with separate collections for routines and exercises
@@ -26,75 +26,79 @@ This document tracks the development progress and future plans for the AI Traine
 - ✅ Secured Firebase credentials
 - ✅ Implemented version control with Git
 
-## 🔲 Remaining Tasks
+## 🔲 AI Personal Trainer Development Path
 
-### User Experience
-- 🔲 Add user authentication and profiles
-- 🔲 Implement workout history and progress tracking
-- 🔲 Create dashboard with workout statistics
-- 🔲 Add ability to customize rest times
-- 🔲 Implement workout completion summary
+### Phase 1: Voice-Guided Workouts (Basic)
+- 🔲 Add pre-recorded audio prompts for standard workout guidance
+  - "Start your set now"
+  - "Take a deep breath"
+  - "Rest period begins"
+  - "10 seconds remaining"
+  - "Great job completing this exercise"
+- 🔲 Implement audio playback system in the workout flow
+- 🔲 Create audio controls (mute/unmute, volume)
+- 🔲 Add basic exercise images for form guidance
 
-### Content & Media
-- 🔲 Add exercise images/videos for proper form guidance
-- 🔲 Create exercise library with detailed descriptions
-- 🔲 Implement exercise categorization (push, pull, legs, etc.)
-- 🔲 Add exercise variations and alternatives
+### Phase 2: AI Workout Creation (Basic)
+- 🔲 Create schema for AI-generated workout plans
+- 🔲 Build workout creation form with options for:
+  - Workout duration
+  - Available equipment
+  - Fitness goals (strength, endurance, etc.)
+  - Experience level
+- 🔲 Integrate GPT-4 API for generating basic workouts based on constraints
+- 🔲 Store and display AI-generated workouts in the same format as preset routines
 
-### Routine Management
-- 🔲 Allow users to create custom routines
-- 🔲 Add ability to copy and modify existing routines
-- 🔲 Implement drag-and-drop routine builder
-- 🔲 Add pre-made routine templates for different goals
+### Phase 3: Voice Guidance Enhancement
+- 🔲 Integrate ElevenLabs API for text-to-speech conversion
+- 🔲 Generate exercise-specific voice guidance:
+  - Form cues for specific exercises
+  - Encouragement based on exercise difficulty
+  - Breathing guidance appropriate to the movement
+- 🔲 Add multiple voice options/personas (coach, friend, drill sergeant)
+- 🔲 Implement caching system for generated audio to reduce API costs
 
-### Workout Features
-- 🔲 Add weight/resistance tracking per exercise
-- 🔲 Implement progressive overload suggestions
-- 🔲 Add support for supersets and circuit training
-- 🔲 Implement warm-up sets
-- 🔲 Add voice guidance during workout
+### Phase 4: Advanced AI Workout Generation
+- 🔲 Enhance AI workout generation with more personalization options
+- 🔲 Add support for generating workout progressions (multi-week plans)
+- 🔲 Implement workout validation to ensure balanced and safe routines
+- 🔲 Allow users to regenerate or tweak parts of AI-suggested workouts
+- 🔲 Create specialized workout types (HIIT, strength, mobility, etc.)
 
-### Technical Improvements
-- 🔲 Add comprehensive test suite (unit, integration, E2E tests)
-- 🔲 Implement offline support with local storage
-- 🔲 Optimize for mobile experience
-- 🔲 Add PWA support for mobile app-like experience
-- 🔲 Implement performance monitoring and analytics
+### Phase 5: Full AI Personal Trainer Experience
+- 🔲 Implement user profiles with workout history and preferences
+- 🔲 Create AI-generated personalized voice guidance based on user progress
+- 🔲 Add dynamic feedback during workouts (pace adjustments, form reminders)
+- 🔲 Implement progress tracking and AI-adjusted difficulty
+- 🔲 Add conversational interface for modifying workouts mid-session
 
-### Data & AI Features
-- 🔲 Add AI-powered workout recommendations
-- 🔲 Implement smart progression based on user performance
-- 🔲 Create personalized workout plans based on goals and history
-- 🔲 Add form analysis using device camera (optional)
-- 🔲 Implement social features for workout sharing and competition
+## Technical Implementation Notes
 
-## Development Timeline
+### Voice Guidance System
+- Initial implementation will use simple pre-recorded audio files
+- Audio will be triggered based on workout state (start, during exercise, rest, completion)
+- ElevenLabs integration will use their API for text-to-speech conversion
+- Consider implementing a voice cache to avoid regenerating common phrases
 
-### Phase 1: Core Functionality (Completed)
-- Basic routine and exercise management
-- Workout flow implementation
-- Database schema normalization
+### AI Workout Generation
+- Will use GPT-4 API with carefully crafted prompts
+- System needs to validate generated workouts for safety and effectiveness
+- Schema should include:
+  - Exercise selection with proper ordering
+  - Sets, reps, and rest periods appropriate to goals
+  - Warm-up and cool-down components
+  - Form tips and audio guidance scripts
 
-### Phase 2: User Experience Improvements (Next)
-- User authentication and profiles
-- Exercise media (images/videos)
-- Customization options for routines and workouts
-
-### Phase 3: Advanced Features
-- Progressive overload tracking
-- AI-powered recommendations
-- Mobile optimization and offline support
-
-### Phase 4: Social and Premium Features
-- Social sharing and competitions
-- Advanced analytics
-- Premium content and features
+### User Preferences and Progress
+- Store user constraints (equipment, time, injuries, goals)
+- Track completed workouts to inform future recommendations
+- Allow saving favorite workouts and exercises
 
 ## How to Contribute
 
 To contribute to this roadmap or implement a feature:
 
-1. Choose a task from the "Remaining Tasks" section
+1. Choose a task from one of the phases
 2. Create a new branch with a descriptive name
 3. Implement the feature
 4. Write tests if applicable
