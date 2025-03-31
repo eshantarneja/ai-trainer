@@ -14,14 +14,16 @@ function RestTimer({
   nextSet, 
   onSkipRest, 
   onBack, 
-  onExitWorkout 
+  onExitWorkout,
+  isWarmup = false // New prop to determine if this is a warmup screen
 }: { 
   seconds: number, 
   nextExercise: string, 
   nextSet: number, 
   onSkipRest: () => void, 
   onBack: () => void, 
-  onExitWorkout: () => void 
+  onExitWorkout: () => void,
+  isWarmup?: boolean
 }) {
   const [timeLeft, setTimeLeft] = useState(seconds)
 
@@ -69,17 +71,17 @@ function RestTimer({
               <path d="m15 18-6-6 6-6" />
             </svg>
           </Link>
-          <h1 className="text-xl font-semibold">Rest</h1>
+          <h1 className="text-xl font-semibold">{isWarmup ? 'Warm Up' : 'Rest'}</h1>
           <div className="w-6"></div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 130px)' }}>
         <div className="bg-white p-8 rounded-lg shadow-sm w-full mb-6">
-          <h2 className="text-2xl font-bold text-center mb-5">Rest</h2>
+          <h2 className="text-2xl font-bold text-center mb-5">{isWarmup ? 'Warm Up' : 'Rest'}</h2>
           <div className="text-6xl font-bold text-center mb-5">{formattedTime}</div>
           <p className="text-center text-gray-600">
-            Next: {nextExercise} - Set {nextSet}
+            {isWarmup ? 'Starting With:' : 'Next:'} {nextExercise} - Set {nextSet}
           </p>
         </div>
 
@@ -95,7 +97,7 @@ function RestTimer({
               onClick={onSkipRest}
               className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg text-center"
             >
-              Skip Rest
+              {isWarmup ? 'Skip Warm Up' : 'Skip Rest'}
             </button>
           </div>
           <button
@@ -258,7 +260,8 @@ export default function WorkoutPage() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [currentSet, setCurrentSet] = useState(1)
   const [isResting, setIsResting] = useState(false)
-  // Track the next exercise/set to show during rest
+  const [isWarmingUp, setIsWarmingUp] = useState(true) // Start with warmup screen
+  // Track the next exercise/set to show during rest or after warmup
   const [nextExerciseInfo, setNextExerciseInfo] = useState<{ name: string, set: number }>({ name: '', set: 0 })
   
   useEffect(() => {
@@ -275,6 +278,14 @@ export default function WorkoutPage() {
         setRoutine(routineData)
         
         const exercisesData = await getExercisesByRoutine(routineId)
+        
+        // Set first exercise info for warmup screen
+        if (exercisesData.length > 0) {
+          setNextExerciseInfo({
+            name: exercisesData[0].name,
+            set: 1
+          })
+        }
         
         // With the new normalized schema, exercises have an 'order' field that's used to sort them
         // The backend API already returns them sorted, but we'll sort here as well for safety
@@ -396,6 +407,26 @@ export default function WorkoutPage() {
   
   // The next exercise info is now stored in state when the user clicks next
   
+  // Handle warmup completion
+  const handleWarmupComplete = () => {
+    setIsWarmingUp(false)
+  }
+
+  // Display different screens based on the workout phase
+  if (isWarmingUp) {
+    return (
+      <RestTimer
+        seconds={60} // 1 minute warmup
+        nextExercise={nextExerciseInfo.name}
+        nextSet={nextExerciseInfo.set}
+        onSkipRest={handleWarmupComplete}
+        onBack={() => router.push(`/${routineId}`)} // Go back to routine page
+        onExitWorkout={handleExitWorkout}
+        isWarmup={true} // Pass flag to indicate this is warmup
+      />
+    )
+  }
+  
   if (isResting) {
     return (
       <RestTimer
@@ -405,6 +436,7 @@ export default function WorkoutPage() {
         onSkipRest={() => setIsResting(false)}
         onBack={handleBack}
         onExitWorkout={handleExitWorkout}
+        isWarmup={false}
       />
     )
   }
