@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getRoutine, getExercisesByRoutine, formatRestTime, generateRoutineIntro } from '@/lib/api'
+import { getRoutine, getExercisesByRoutine, formatRestTime, generateRoutineIntro, generateAnnouncement } from '@/lib/api'
 import type { Exercise, Routine } from '@/lib/api'
 import AudioPlayer from '@/components/AudioPlayer'
 
@@ -60,8 +60,11 @@ function WarmupScreen({
   onComplete: () => void,
   onExit: () => void
 }) {
-  // The audio player is only rendered once when this component mounts
-  // It won't be affected by the timer updates
+  // Flag to track if we need to use browser TTS as fallback
+  // No longer using browser TTS as per requirement
+  
+  // We've removed browser TTS functionality as requested
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white py-4 px-4 border-b">
@@ -88,16 +91,36 @@ function WarmupScreen({
       </header>
 
       <main className="max-w-md mx-auto px-4 flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 130px)' }}>
-        {audioUrl && (
-          <div className="w-full mb-6">
-            <AudioPlayer 
-              audioUrl={audioUrl} 
-              autoPlay={true} 
-              onEnded={() => console.log('Audio introduction complete')} 
-              onError={() => console.error('Failed to play introduction audio')} 
-            />
-          </div>
-        )}
+        <div className="w-full mb-6">
+          {audioUrl ? (
+            // Use the ElevenLabs audio player when available
+            <div>
+              <AudioPlayer
+                audioUrl={audioUrl}
+                autoPlay={true} // Keep autoplay enabled as requested
+                onError={() => {
+                  // Don't fall back to browser TTS as requested
+                  console.log('Audio error detected but keeping ElevenLabs audio');
+                  // We'll just retry instead
+                  console.log('Retrying with ElevenLabs audio only');
+                }}
+              />
+            </div>
+          ) : (
+            // No audio URL, show notification with loading state
+            <div className="bg-white rounded-lg p-3 shadow-sm mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-t-slate-800 border-r-slate-800 border-b-slate-800 border-l-transparent animate-spin"></div>
+                  <div>
+                    <p className="text-sm font-medium">Trainer Introduction</p>
+                    <p className="text-xs text-gray-500">Loading audio...</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         
         <div className="bg-white p-8 rounded-lg shadow-sm w-full mb-6">
           <h2 className="text-2xl font-bold text-center mb-5">Warm Up</h2>
@@ -135,15 +158,33 @@ function RestScreen({
   nextExerciseSet,
   onComplete,
   onBack,
-  onExit
+  onExit,
+  announcementAudioUrl
 }: {
   seconds: number,
   nextExerciseName: string,
   nextExerciseSet: number,
   onComplete: () => void,
   onBack: () => void,
-  onExit: () => void
+  onExit: () => void,
+  announcementAudioUrl: string | null
 }) {
+  // Play rest announcement when component mounts
+  useEffect(() => {
+    if (announcementAudioUrl) {
+      const audio = new Audio(announcementAudioUrl);
+      audio.play().catch(() => {
+        console.warn('Could not auto-play audio, browser may restrict autoplay');
+        // Try to play on user interaction
+        const playOnInteraction = () => {
+          audio.play().catch(() => {});
+          document.removeEventListener('click', playOnInteraction);
+        };
+        document.addEventListener('click', playOnInteraction, { once: true });
+      });
+    }
+  }, [announcementAudioUrl]);
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white py-4 px-4 border-b">
@@ -172,7 +213,7 @@ function RestScreen({
       <main className="max-w-md mx-auto px-4 flex flex-col items-center justify-center" style={{ minHeight: 'calc(100vh - 130px)' }}>
         <div className="bg-white p-8 rounded-lg shadow-sm w-full mb-6">
           <h2 className="text-2xl font-bold text-center mb-5">Rest</h2>
-          <CountdownTimer seconds={seconds} onComplete={onComplete} />
+          <CountdownTimer seconds={seconds || 60} onComplete={onComplete} />
           <p className="text-center text-gray-600 mt-4">
             Next: {nextExerciseName} - Set {nextExerciseSet}
           </p>
@@ -206,15 +247,33 @@ function ExerciseView({
   totalSets, 
   onNextSet, 
   onBack, 
-  onExitWorkout 
+  onExitWorkout,
+  announcementAudioUrl
 }: { 
   exercise: Exercise & { image: string }, 
   currentSet: number, 
   totalSets: number, 
   onNextSet: () => void, 
   onBack: () => void, 
-  onExitWorkout: () => void 
+  onExitWorkout: () => void,
+  announcementAudioUrl: string | null
 }) {
+  // Play rest announcement when component mounts
+  useEffect(() => {
+    if (announcementAudioUrl) {
+      const audio = new Audio(announcementAudioUrl);
+      audio.play().catch(() => {
+        console.warn('Could not auto-play audio, browser may restrict autoplay');
+        // Try to play on user interaction
+        const playOnInteraction = () => {
+          audio.play().catch(() => {});
+          document.removeEventListener('click', playOnInteraction);
+        };
+        document.addEventListener('click', playOnInteraction, { once: true });
+      });
+    }
+  }, [announcementAudioUrl]);
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white py-4 px-4 border-b">
@@ -255,7 +314,7 @@ function ExerciseView({
               <div>
                 <h2 className="text-xl font-semibold">{exercise.name}</h2>
                 <p className="text-gray-600 text-sm mt-1">
-                  {exercise.reps} reps × {formatRestTime(exercise.rep_time)} per rep
+                  {exercise.reps} reps × {formatRestTime(exercise.rep_time || 10)} per rep
                 </p>
               </div>
               <div className="bg-slate-100 px-3 py-2 rounded-lg">
@@ -315,9 +374,184 @@ export default function WorkoutPage() {
   const [isResting, setIsResting] = useState(false)
   const [isWarmingUp, setIsWarmingUp] = useState(true) // Start with warmup screen
   const [introAudioUrl, setIntroAudioUrl] = useState<string | null>(null)
+  // Flag to track if we should use browser TTS instead of ElevenLabs
+  const [useLocalTTS, setUseLocalTTS] = useState(false)
   // Track the next exercise/set to show during rest or after warmup
   const [nextExerciseInfo, setNextExerciseInfo] = useState<{ name: string, set: number }>({ name: '', set: 0 })
   
+  // Store announcement audio URLs
+  const [announcementAudios, setAnnouncementAudios] = useState<Record<string, string>>({})
+  
+  // State to track announcements that need fallback TTS
+  const [fallbackAnnouncements, setFallbackAnnouncements] = useState<Record<string, string>>({});
+  
+  // State for warmup intro fallback text
+  const [introFallbackText, setIntroFallbackText] = useState<string | null>(null);
+
+  // Function to speak text using browser's built-in TTS with consistent voice
+  const speakWithBrowserTTS = (text: string) => {
+    console.log('Speaking with browser TTS:', text);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        // Cancel any ongoing speech first
+        window.speechSynthesis.cancel();
+        
+        // Create utterance
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;  // Slightly slower rate for better clarity
+        utterance.volume = 1.0; // Full volume
+        
+        // Try to get voices (this may be async on some browsers)
+        let voices = window.speechSynthesis.getVoices();
+        
+        // If voices aren't loaded yet, set up a handler for when they are
+        if (voices.length === 0) {
+          window.speechSynthesis.onvoiceschanged = () => {
+            voices = window.speechSynthesis.getVoices();
+            // Try to find an English voice if available
+            const englishVoices = voices.filter(voice => 
+              voice.lang.startsWith('en-') && !voice.name.includes('Google'));
+            if (englishVoices.length > 0) {
+              utterance.voice = englishVoices[0];
+            }
+            
+            // Now actually speak
+            window.speechSynthesis.speak(utterance);
+          };
+        } else {
+          // Voices are already available, use them
+          // Try to find an English voice if available
+          const englishVoices = voices.filter(voice => 
+            voice.lang.startsWith('en-') && !voice.name.includes('Google'));
+          if (englishVoices.length > 0) {
+            utterance.voice = englishVoices[0];
+          }
+          
+          // Now actually speak
+          window.speechSynthesis.cancel(); // Cancel any ongoing speech
+          window.speechSynthesis.speak(utterance);
+        }
+      } catch (err) {
+        console.warn('Error using browser TTS:', err);
+      }
+    } else {
+      console.warn('Browser TTS not supported');
+    }
+  };
+
+  // Initialize speech synthesis voices - ensures voices are loaded
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      // Force load voices if they're not already available
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // This is a hack to ensure voices are loaded in some browsers
+        window.speechSynthesis.onvoiceschanged = () => {
+          console.log('Speech synthesis voices loaded');
+        };
+      }
+    }
+  }, []);
+
+  // We're no longer using this effect as we're not falling back to browser TTS
+  // for the intro audio as requested
+  
+  // Generate all announcements when routine data is loaded
+  useEffect(() => {
+    async function generateAllAnnouncements() {
+      if (!exercises.length) return;
+      
+      // 1. Generate browser TTS announcements for exercise and rest transitions
+      const fallbacks: Record<string, string> = {};
+      const announcementsToGenerate: { key: string; text: string }[] = [];
+      
+      console.log('Setting up announcements for workout');
+      
+      // Create list of all announcements we'll need for browser TTS
+      exercises.forEach((exercise, exerciseIndex) => {
+        for (let setNum = 1; setNum <= exercise.sets; setNum++) {
+          // Exercise announcement
+          const exerciseText = `Now starting ${exercise.name}, Set ${setNum}`;
+          announcementsToGenerate.push({
+            key: `exercise_${exercise.id}_set_${setNum}`,
+            text: exerciseText
+          });
+          
+          // Rest announcement (except after last set of last exercise)
+          if (!(exerciseIndex === exercises.length - 1 && setNum === exercise.sets)) {
+            const restSeconds = exercise.rest_time || 60; // Default to 60 if undefined
+            const restText = `Now starting Rest. ${restSeconds} seconds.`;
+            announcementsToGenerate.push({
+              key: `rest_${exercise.id}_set_${setNum}`,
+              text: restText
+            });
+          }
+        }
+      });
+      
+      // Set up browser TTS for exercise and rest announcements
+      try {
+        const allFallbacks: Record<string, string> = {};
+        announcementsToGenerate.forEach(item => {
+          allFallbacks[item.key] = item.text;
+        });
+        
+        setFallbackAnnouncements(allFallbacks);
+        console.log('Browser TTS ready for exercise and rest announcements');
+        
+      } catch (error) {
+        console.warn('Error setting up TTS announcements');
+      }
+      
+      // 2. Generate the warmup intro with ElevenLabs - more personal trainer like
+      try {
+        const firstExercise = exercises[0];
+        // Create an engaging introduction based on the routine name
+        let routineType = '';
+        if (routine?.name?.toLowerCase().includes('leg')) {
+          routineType = 'leg';
+        } else if (routine?.name?.toLowerCase().includes('arm') || routine?.name?.toLowerCase().includes('upper')) {
+          routineType = 'upper body';
+        } else if (routine?.name?.toLowerCase().includes('core') || routine?.name?.toLowerCase().includes('ab')) {
+          routineType = 'core';
+        } else if (routine?.name?.toLowerCase().includes('cardio')) {
+          routineType = 'cardio';
+        } else if (routine?.name?.toLowerCase().includes('full')) {
+          routineType = 'full body';
+        }
+        
+        const introText = `Hi, I'm your AI Trainer. Welcome to your ${routine?.name || 'workout'} session. ` +
+                         `Let's start with a proper 60-second warmup to prepare your body and mind. ` +
+                         (routineType ? `This ${routineType} workout will energize you and build strength where you need it most. ` : '') +
+                         `We'll begin with ${firstExercise.name} for ${firstExercise.sets} sets, ` +
+                         `and I'll guide you through all ${exercises.length} exercises with proper form cues and rest periods. ` +
+                         `Remember to stay hydrated and listen to your body throughout this workout. ` +
+                         `Let's get started and make today count!`;
+        
+        // Generate audio with ElevenLabs only - no fallbacks
+        console.log('Generating intro audio with ElevenLabs');
+        try {
+          const result = await generateAnnouncement(introText);
+          
+          if (result.audioUrl) {
+            console.log('Successfully generated ElevenLabs audio');
+            setIntroAudioUrl(result.audioUrl);
+          } else {
+            console.warn('No audio URL returned from ElevenLabs');
+          }
+        } catch (audioError) {
+          console.warn('Error generating audio with ElevenLabs:', audioError);
+        }
+      } catch (error) {
+        console.warn('Error generating intro audio:', error);
+      }
+    }
+    
+    if (exercises.length > 0 && !loading) {
+      generateAllAnnouncements();
+    }
+  }, [exercises, loading]);
+
   useEffect(() => {
     async function fetchWorkoutData() {
       try {
@@ -333,15 +567,15 @@ export default function WorkoutPage() {
         
         // Check for existing warmup audio and set it, or try to generate new audio
         if (routineData.warmup_audio_url) {
-          // Convert relative URL to absolute URL
-          const fullAudioUrl = `http://localhost:5002${routineData.warmup_audio_url}`
+          // Use relative URL for Next.js API rewrites to handle
+          const fullAudioUrl = `${routineData.warmup_audio_url}`
           setIntroAudioUrl(fullAudioUrl)
         } else {
           // Try to generate the intro audio if it doesn't exist
           try {
             const response = await generateRoutineIntro(routineId)
             if (response.audio_url) {
-              const fullAudioUrl = `http://localhost:5002${response.audio_url}`
+              const fullAudioUrl = `${response.audio_url}`
               setIntroAudioUrl(fullAudioUrl)
             }
           } catch (audioError) {
@@ -484,6 +718,35 @@ export default function WorkoutPage() {
   }
 
   // Display different screens based on the workout phase
+  // Helper functions to get the right audio URLs or use browser TTS fallback for exercises and rest periods
+  const getExerciseAnnouncementUrl = (exerciseId: string, setNumber: number): string | null => {
+    const key = `exercise_${exerciseId}_set_${setNumber}`;
+    
+    // Check if we should use browser TTS instead
+    if (fallbackAnnouncements[key]) {
+      console.log('Using browser TTS for exercise announcement:', key);
+      // Use a timeout to ensure it runs after component renders
+      setTimeout(() => speakWithBrowserTTS(fallbackAnnouncements[key]), 100);
+      return null;
+    }
+    
+    return announcementAudios[key] || null;
+  };
+
+  const getRestAnnouncementUrl = (exerciseId: string, setNumber: number): string | null => {
+    const key = `rest_${exerciseId}_set_${setNumber}`;
+    
+    // Check if we should use browser TTS instead
+    if (fallbackAnnouncements[key]) {
+      console.log('Using browser TTS for rest announcement:', key);
+      // Use a timeout to ensure it runs after component renders
+      setTimeout(() => speakWithBrowserTTS(fallbackAnnouncements[key]), 100);
+      return null;
+    }
+    
+    return announcementAudios[key] || null;
+  };
+
   if (isWarmingUp) {
     return (
       <WarmupScreen
@@ -499,12 +762,13 @@ export default function WorkoutPage() {
   if (isResting) {
     return (
       <RestScreen
-        seconds={currentExercise.rest_time}
+        seconds={currentExercise.rest_time || 60} // Default to 60 seconds if undefined
         nextExerciseName={nextExerciseInfo.name}
         nextExerciseSet={nextExerciseInfo.set}
         onComplete={() => setIsResting(false)}
         onBack={handleBack}
         onExit={handleExitWorkout}
+        announcementAudioUrl={getRestAnnouncementUrl(currentExercise.id, currentSet)}
       />
     )
   }
@@ -517,6 +781,7 @@ export default function WorkoutPage() {
       onNextSet={handleNext}
       onBack={handleBack}
       onExitWorkout={handleExitWorkout}
+      announcementAudioUrl={getExerciseAnnouncementUrl(currentExercise.id, currentSet)}
     />
   )
 }
